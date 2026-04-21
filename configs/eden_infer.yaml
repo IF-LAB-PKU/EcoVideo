@@ -1,0 +1,23 @@
+model_name: "EDEN"
+# Change this to your local EDEN checkpoint path.
+pretrained_eden_path: "/path/to/eden.pt"
+cos_sim_mean: 0.990539
+cos_sim_std: 0.0608093
+vae_scaler: 0.179437
+vae_shift: 0.770202
+model_args:
+  in_dim: 3
+  out_dim: 3
+  patch_size: 16
+  latent_dim: 16
+  hidden_dim: 768
+  num_heads: 12
+  mlp_ratio: 4.0
+  dit_depth: 12
+  decoder_depth: 4
+  qkv_bias: false
+  attn_drop_rate: 0.
+  proj_drop_rate: 0.
+  use_xformers: true
+  add_attn_decoder: true
+  add_attn_type: "temporal_attn"

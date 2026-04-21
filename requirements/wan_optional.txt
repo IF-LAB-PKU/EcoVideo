@@ -1,0 +1,11 @@
+# Optional dependencies only needed if you restore non-T2V Wan modules
+# such as I2V / S2V / Animate / prompt extension.
+# EcoVideo T2V release does not require these by default.
+# decord
+# peft
+# librosa
+# hydra-core
+# omegaconf
+# modelscope
+# dashscope
+# xfuser

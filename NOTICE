@@ -1,0 +1,14 @@
+EcoVideo Open-Source Release Notice
+
+This repository contains EcoVideo original code and selected vendored third-party
+components required for the text-to-video inference path.
+
+Vendored components:
+- third_party/wan21/wan: Wan2.1-derived T2V code, modified for entropy-based keyframe selection and non-key context support.
+- third_party/wan22/wan: Wan2.2-derived T2V code, modified for entropy-based keyframe selection and non-key context support.
+- third_party/raft: RAFT-derived optical-flow code used optionally for interval scoring.
+
+Before making the repository public, add the exact upstream repository URLs,
+original license files, and a file-level summary of modifications for each
+vendored component. Do not apply the EcoVideo project license to third-party
+code unless the upstream license permits it.

@@ -1,0 +1,14 @@
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+This repository template assumes Apache-2.0 for EcoVideo original code. Before
+public release, verify that all vendored third-party components under
+third_party/ can legally be redistributed together with their original license
+files and copyright notices. Third-party components remain subject to their own
+licenses.
+
+For the full Apache-2.0 license text, use the canonical text from:
+https://www.apache.org/licenses/LICENSE-2.0

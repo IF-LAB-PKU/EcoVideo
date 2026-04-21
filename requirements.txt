@@ -1,0 +1,3 @@
+-r requirements/base.txt
+# Install xformers only when a wheel is available for your torch/CUDA version.
+# xformers
