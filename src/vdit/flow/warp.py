@@ -1,9 +1,9 @@
 """
-轻量 warp / grid 工具（torch-only）。
+Lightweight warp / grid utilities (torch-only).
 
-用途：
-- RAFT forward-back consistency 需要把 f21 warp 到 (x + f12(x)) 上取样。
-- 避免依赖 RAFT utils 里对 scipy 的硬依赖。
+Purpose:
+- RAFT forward-back consistency requires warping f21 to sample at (x + f12(x)).
+- Avoids hard scipy dependency in RAFT utils.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 
 def coords_grid(batch: int, ht: int, wd: int, device: torch.device) -> torch.Tensor:
-    """返回像素坐标网格，shape [B,2,H,W]，通道为 (x,y)。"""
+    """Return pixel coordinate grid, shape [B,2,H,W], channels are (x,y)."""
     yy, xx = torch.meshgrid(
         torch.arange(ht, device=device),
         torch.arange(wd, device=device),
@@ -32,7 +32,7 @@ def bilinear_sample(
 ) -> torch.Tensor:
     """
     img: [B,C,H,W]
-    coords_xy: [B,H,W,2]，像素坐标系 (x,y)
+    coords_xy: [B,H,W,2], pixel coordinates (x,y)
     """
     b, _, h, w = img.shape
     x = coords_xy[..., 0]

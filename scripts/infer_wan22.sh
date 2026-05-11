@@ -8,7 +8,7 @@ export PYTHONPATH="${PYTHONPATH:-}:$(pwd)/src"
 WAN22_CKPT="${WAN22_CKPT:?Set WAN22_CKPT to your Wan2.2-T2V-A14B checkpoint directory}"
 EDEN_CKPT="${EDEN_CKPT:?Set EDEN_CKPT to your EDEN checkpoint path}"
 RAFT_CKPT="${RAFT_CKPT:-}"
-PROMPT="${PROMPT:-A giraffe is walking through a green field under a blue sky.}"
+PROMPT="${PROMPT:-A person is canoeing or kayaking.}"
 OUT="${OUT:-outputs/wan22_ecovideo.mp4}"
 
 TMP_CFG="outputs/eden_infer.local.yaml"

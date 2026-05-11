@@ -133,9 +133,9 @@ def auto_keyframe_topk_cogvideo(
     max_k: Optional[int] = None,
 ) -> int:
     """
-    近似从目标关键帧视频 fps 估计 latent 关键帧 K。
-    假设 CogVideo temporal VAE stride_t ~ 4，并近似满足:
-      pixel_frames ≈ 4 * (latent_frames - 1) + 1
+    Approximate latent keyframe K from target keyframe video fps.
+    Assumes CogVideo temporal VAE stride_t ~ 4, approximately:
+      pixel_frames ~ 4 * (latent_frames - 1) + 1
     """
     if fps_key <= 0:
         raise ValueError(f"fps_key must be > 0, got {fps_key}")
@@ -255,7 +255,7 @@ class CogVideoXAttnProcessor2_0ForEntropy(CogVideoXAttnProcessor2_0):
         self.enabled = True
         self.current_num_latent_frames: Optional[int] = None
 
-        # 控制显存和速度的节流参数
+        # Throttling parameters for VRAM and speed control
         self.entropy_num_heads_sample = int(entropy_num_heads_sample)
         self.entropy_q_chunk_size = int(entropy_q_chunk_size)
         self.entropy_tokens_per_frame_sample = int(entropy_tokens_per_frame_sample)
@@ -783,7 +783,7 @@ def sample_cogvideo_t2v_with_entropy_keyframes(
         return CogVideoXAttnProcessor2_0ForEntropy(
             collector=collector,
             use_nonkey_context=bool(cfg.use_nonkey_context),
-            # 先只统计 cond 分支 + 采样少量 heads / tokens，避免 OOM
+            # Only compute stats on cond branch + sample few heads/tokens to avoid OOM
             cond_only=True,
             entropy_num_heads_sample=4,
             entropy_q_chunk_size=8,

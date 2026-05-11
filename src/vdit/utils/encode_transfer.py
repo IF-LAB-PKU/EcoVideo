@@ -1,6 +1,6 @@
 """
-Encoder输出打包/解包工具函数
-用于将encode()的输出打包成bytes，方便网络传输或进程间传递
+Encoder output packing/unpacking utilities.
+Serializes encode() output to bytes for network transfer or IPC.
 """
 import io
 import torch
@@ -8,16 +8,16 @@ import torch
 
 def pack_enc_out(enc_out: dict) -> bytes:
     """
-    将 encode() 输出的 dict 打包成 bytes，方便网络传输或进程间传递。
-    会把所有 tensor 移到 CPU 再保存（这样不依赖某个 GPU）。
-    
+    Pack encode() output dict into bytes for network transfer or IPC.
+    Moves all tensors to CPU before saving (device-independent).
+
     Args:
-        enc_out: encode()返回的dict，包含cond_dit, cond_dec, stats_mean, stats_std, ph, pw等
-    
+        enc_out: dict from encode(), contains cond_dit, cond_dec, stats_mean, stats_std, ph, pw, etc.
+
     Returns:
-        bytes: 打包后的二进制数据
+        bytes: serialized binary data
     """
-    # 先把所有 tensor 移到 CPU，避免绑定到某个 GPU
+    # Move all tensors to CPU to avoid GPU binding
     cpu_dict = {}
     for k, v in enc_out.items():
         if torch.is_tensor(v):
@@ -32,19 +32,19 @@ def pack_enc_out(enc_out: dict) -> bytes:
 
 def unpack_enc_out(blob: bytes, device: torch.device) -> dict:
     """
-    从 bytes 还原 encode() 输出，并把里面的 tensor 移到指定 device（比如 cuda:1）。
-    
+    Restore encode() output from bytes and move tensors to the target device.
+
     Args:
-        blob: pack_enc_out()返回的bytes数据
-        device: 目标设备，如torch.device("cuda:1")
-    
+        blob: bytes returned by pack_enc_out()
+        device: target device, e.g. torch.device("cuda:1")
+
     Returns:
-        dict: 还原后的enc_out，所有tensor都在指定device上
+        dict: restored enc_out with all tensors on the specified device
     """
     buffer = io.BytesIO(blob)
     enc_out = torch.load(buffer, map_location="cpu")
     
-    # 移到目标 device
+    # Move to target device
     for k, v in enc_out.items():
         if torch.is_tensor(v):
             enc_out[k] = v.to(device)

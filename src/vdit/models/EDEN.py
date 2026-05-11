@@ -47,50 +47,50 @@ class EDEN(nn.Module):
 
     def encode(self, cond_frames):
         """
-        Encoder方法：将条件帧编码为tokens
-        
+        Encode conditioning frames into tokens.
+
         Args:
-            cond_frames: [2, 3, H', W']，经过padder处理后的两帧拼接结果
-        
+            cond_frames: [2, 3, H', W'], two padded frames concatenated
+
         Returns:
-            dict: 包含编码后的所有信息
-                - cond_dit: [2, ph*pw, dim] - 给DiT用的tokens
-                - cond_dec: [2, ph*pw, dim] - 给decoder用的tokens
-                - stats_mean: 归一化的均值
-                - stats_std: 归一化的标准差
-                - ph: patch高度数量
-                - pw: patch宽度数量
+            dict: encoded outputs
+                - cond_dit: [2, ph*pw, dim] - tokens for DiT
+                - cond_dec: [2, ph*pw, dim] - tokens for decoder
+                - stats_mean: normalization mean
+                - stats_std: normalization std
+                - ph: number of patches along height
+                - pw: number of patches along width
         """
-        # 1. 归一化并记录统计信息
+        # 1. Normalize and record statistics
         x, stats = preprocess_cond(cond_frames)
-        self.stats = stats  # 为decode()做准备
-        
-        # 2. 计算patch网格尺寸
+        self.stats = stats  # saved for decode()
+
+        # 2. Compute patch grid dimensions
         self.ph = x.shape[-2] // self.patch_size
         self.pw = x.shape[-1] // self.patch_size
-        
-        # 3. 位置编码
+
+        # 3. Positional embedding
         self.pos_embedding = get_pos_embedding(self.ph, self.pw, 1, self.dim).to(x.device)
-        
-        # 4. DiT分支编码
+
+        # 4. DiT branch encoding
         cond_dit = self.patch_cond_dit(x).flatten(2).transpose(1, 2)  # [2, ph*pw, dim]
         cond_dit = self.norm_cond_dit(cond_dit + self.pos_embedding)
-        
-        # 5. Decoder分支编码
+
+        # 5. Decoder branch encoding
         cond_dec = self.patch_cond_dec(x).flatten(2).transpose(1, 2)  # [2, ph*pw, dim]
         cond_dec = self.norm_cond_dec(cond_dec + self.pos_embedding)
-        
-        # 6. 保存给decode()用
+
+        # 6. Save for decode()
         self.cond_dec = cond_dec
-        
-        # 7. 返回编码结果
+
+        # 7. Return encoded results
         return {
             "cond_dit": cond_dit,      # [2, ph*pw, dim]
             "cond_dec": cond_dec,      # [2, ph*pw, dim]
-            "stats_mean": stats[0],    # 归一化均值
-            "stats_std": stats[1],     # 归一化标准差
-            "ph": self.ph,             # patch高度数量
-            "pw": self.pw,             # patch宽度数量
+            "stats_mean": stats[0],    # normalization mean
+            "stats_std": stats[1],     # normalization std
+            "ph": self.ph,             # patch count along height
+            "pw": self.pw,             # patch count along width
         }
 
     def patch_cond(self, x):
@@ -142,48 +142,48 @@ class EDEN(nn.Module):
 
     def denoise_from_tokens(self, query_latents, denoise_timestep, enc_out, difference):
         """
-        使用encoder输出的tokens进行去噪（不重新调用patch_cond）
-        
+        Denoise using pre-computed encoder tokens (skips patch_cond).
+
         Args:
-            query_latents: [1, num_patches, latent_dim] - 当前扩散状态z_t
-            denoise_timestep: [1] - 当前时间步t
-            enc_out: dict - encode()的输出，包含cond_dit, cond_dec, stats等
-            difference: [1, 1] - 余弦相似度embedding的输入
-        
+            query_latents: [1, num_patches, latent_dim] - current diffusion state z_t
+            denoise_timestep: [1] - current timestep t
+            enc_out: dict - output from encode(), contains cond_dit, cond_dec, stats, etc.
+            difference: [1, 1] - cosine similarity embedding input
+
         Returns:
-            query_latents: [1, num_patches, latent_dim] - 去噪后的latent
+            query_latents: [1, num_patches, latent_dim] - denoised latent
         """
-        # 1. 从enc_out中取出encoder输出
+        # 1. Extract encoder outputs from enc_out
         cond_dit = enc_out["cond_dit"]      # [2, ph*pw, dim]
         cond_dec = enc_out["cond_dec"]      # [2, ph*pw, dim]
         stats_mean = enc_out["stats_mean"]
         stats_std = enc_out["stats_std"]
         ph = enc_out["ph"]
         pw = enc_out["pw"]
-        
-        # 2. 更新self的状态（让decode能用到）
+
+        # 2. Update internal state for decode()
         self.ph, self.pw = ph, pw
         self.stats = (stats_mean, stats_std)
         self.cond_dec = cond_dec
-        # 设置pos_embedding（decode()需要用到）
+        # Set pos_embedding (needed by decode())
         self.pos_embedding = get_pos_embedding(ph, pw, 1, self.dim).to(query_latents.device)
-        
-        # 3. 生成时间步和差异的embedding
+
+        # 3. Compute timestep and difference embeddings
         denoise_timestep_embedding = self.denoise_timestep_embedder(denoise_timestep)
         difference_embedding = self.difference_embedder(difference)
         condition_embedding = denoise_timestep_embedding + difference_embedding
         modulations = self.adaLN_modulation(condition_embedding)
-        
-        # 4. Query位置编码
+
+        # 4. Query positional embedding
         self.query_pos_embedding = get_pos_embedding(ph, pw, 2, self.dim).to(query_latents.device)
         query_embedding = self.proj_in(query_latents) + self.query_pos_embedding
-        
-        # 5. DiT主干处理
+
+        # 5. DiT backbone processing
         tokens_0, tokens_1 = cond_dit.chunk(2, dim=0)
         for blk in self.dit_blocks:
             query_embedding = blk(query_embedding, tokens_0, tokens_1, ph, pw, modulations)
-        
-        # 6. 输出投影
+
+        # 6. Output projection
         query_latents = self.proj_out(self.norm_out(query_embedding))
         query_latents, _ = query_latents.chunk(2, dim=-1)
         return query_latents

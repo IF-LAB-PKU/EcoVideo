@@ -24,7 +24,7 @@ def auto_keyframe_topk(
     max_k: Optional[int] = None,
 ) -> int:
     """
-    根据目标关键帧 fps 自动估计 latent 关键帧数量 K。
+    Auto-estimate latent keyframe count K from the target keyframe fps.
     """
     if fps_key <= 0:
         raise ValueError(f"fps_key must be > 0, got {fps_key}")
@@ -43,26 +43,26 @@ def auto_keyframe_topk(
 
 @dataclass(frozen=True)
 class WanGenerateConfig:
-    # -------- WAN 基本参数 --------
+    # -------- WAN basic parameters --------
     wan_version: str = "2.1"  # "2.1" or "2.2"
-    task: str = "t2v-1.3B"  # baseline：wan1.3b
-    size: str = "832*480"  # 1.3B 支持：480*832 / 832*480
-    frame_num: int = 81  # WAN 默认视频帧数（通常 4n+1）
+    task: str = "t2v-1.3B"  # baseline: wan1.3b
+    size: str = "832*480"  # 1.3B supports: 480*832 / 832*480
+    frame_num: int = 81  # WAN default frame count (typically 4n+1)
 
-    # -------- 采样参数（对齐 wan-main/generate.py）--------
+    # -------- Sampling parameters (aligned with wan-main/generate.py) --------
     sample_solver: str = "unipc"  # ["unipc", "dpm++"]
-    sample_steps: int = 50  # t2v 默认 50
+    sample_steps: int = 50  # t2v default 50
     sample_shift: float = 5.0
     guide_scale: float = 5.0
     seed: int = 0
-    offload_model: bool = True  # 单卡默认 True，省显存
+    offload_model: bool = True  # Default True for single GPU to save VRAM
 
-    # -------- 可选：生成后做均匀/随机取帧（按 fps 保持时长不变）--------
-    out_fps: Optional[float] = None  # 例如 8 / 12；None 表示不下采样
+    # -------- Optional: uniform/random frame sampling after generation (keep duration unchanged) --------
+    out_fps: Optional[float] = None  # e.g. 8 / 12; None means no downsampling
     frame_sample: FrameSampleMode = "uniform"
     frame_sample_seed: int = 0
 
-    # -------- Keyframe-by-entropy（真正裁剪 latent 时间维）--------
+    # -------- Keyframe-by-entropy (true latent temporal dimension pruning) --------
     keyframe_by_entropy: bool = False
     entropy_steps: int = 5
     entropy_mode: str = "mean"  # "last" | "mean" | "ema"
@@ -91,15 +91,15 @@ class WanGenerateConfig:
     teacache_warmup: int = 0
     save_teacache_trace_png: bool = True
 
-    # -------- 设备相关 --------
-    device_id: int = 0  # 与 wan-main/generate.py 的 device_id 对齐（int）
-    t5_cpu: bool = False  # 如显存很紧，可 True 试试（会慢）
+    # -------- Device settings --------
+    device_id: int = 0  # Aligned with wan-main/generate.py device_id (int)
+    t5_cpu: bool = False  # Set True if VRAM is tight (slower)
 
 
 def _wan_video_to_vdit_frames(video: torch.Tensor) -> torch.Tensor:
     """
-    WAN:   [C,T,H,W] float, 常用 value_range 约为 [-1,1]
-    VDiT:  [T,3,H,W] float, value_range [0,1]
+    WAN:   [C,T,H,W] float, typical value range ~[-1,1]
+    VDiT:  [T,3,H,W] float, value range [0,1]
     """
     if video.ndim != 4:
         raise ValueError(f"Expect WAN video [C,T,H,W], got {tuple(video.shape)}")
@@ -121,9 +121,9 @@ def generate_wan_frames(
     cfg: WanGenerateConfig,
 ) -> Tuple[torch.Tensor, float]:
     """
-    返回：
-      frames: [T,3,H,W] float in [0,1] （CPU tensor）
-      fps:    float (采样后 fps；若没设 out_fps 则为 WAN config 的 sample_fps)
+    Returns:
+      frames: [T,3,H,W] float in [0,1] (CPU tensor)
+      fps:    float (post-sampling fps; defaults to WAN config sample_fps if out_fps is not set)
     """
     _root = Path(__file__).resolve().parents[3]
     wan_mod = load_wan_package(_root, cfg.wan_version)
@@ -146,7 +146,7 @@ def generate_wan_frames(
     fps_src = float(getattr(wan_cfg, "sample_fps", 24.0))
     fps_tgt = fps_src
 
-    # ----- 构建 WAN pipeline（单卡、非分布式：rank=0）-----
+    # ----- Build WAN pipeline (single GPU, non-distributed: rank=0) -----
     if cfg.wan_version == "2.1":
         model = wan_mod.WanT2V(  # type: ignore[attr-defined]
             config=wan_cfg,
@@ -177,7 +177,7 @@ def generate_wan_frames(
             if keyframe_out_fps is None:
                 keyframe_out_fps = float(cfg.keyframe_target_fps)
 
-        # 生成 WAN2.1 原生视频张量：[C,T,H,W]
+        # Generate WAN2.1 native video tensor: [C,T,H,W]
         video = model.generate(
             prompt,
             size=SIZE_CONFIGS[cfg.size],
@@ -227,7 +227,7 @@ def generate_wan_frames(
                 "please set --wan_nonkey_update_mode none"
             )
 
-        # Wan2.2 A14B pipeline（不支持 method-2，只用 entropy 选关键帧）
+        # Wan2.2 A14B pipeline (no method-2 support, entropy keyframe selection only)
         model = wan_mod.WanT2V(  # type: ignore[attr-defined]
             config=wan_cfg,
             checkpoint_dir=ckpt_dir,
@@ -274,12 +274,12 @@ def generate_wan_frames(
     else:
         raise ValueError(f"Unsupported wan_version: {cfg.wan_version}")
 
-    # 可选：按 out_fps 做“均匀/随机取帧”（保持时长不变，仅支持 wan2.1）
+    # Optional: uniform/random frame sampling by out_fps (keep duration, wan2.1 only)
     if (cfg.wan_version == "2.1" and cfg.out_fps is not None
             and not cfg.keyframe_by_entropy):
         fps_tgt = float(cfg.out_fps)
         if fps_tgt > 0 and abs(fps_tgt - fps_src) > 1e-6:
-            # 延迟从对应 wan 包获取 resample 函数，避免跨版本冲突
+            # Lazy-import resample function from the wan package to avoid cross-version conflicts
             try:
                 fs_mod = wan_mod.utils.frame_sampling  # type: ignore[attr-defined]
                 resample_fn = fs_mod.resample_video_tensor
@@ -298,14 +298,14 @@ def generate_wan_frames(
 
     frames = _wan_video_to_vdit_frames(video).float().cpu()
 
-    # 主动释放 WAN 占用显存（对串联 pipeline 很关键）
+    # Proactively free WAN VRAM (critical for sequential pipelines)
     del video
     try:
         torch.cuda.empty_cache()
     except Exception:
         pass
 
-    # 确保返回的 fps 是 Python float 类型（不是 numpy.float64）
+    # Ensure returned fps is Python float (not numpy.float64)
     return frames, float(fps_tgt)
 
 

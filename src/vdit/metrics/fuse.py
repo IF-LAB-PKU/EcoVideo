@@ -1,21 +1,21 @@
-"""
-5 信息融合打分：g(Ia, Ib)
+“””
+5-signal fusion scoring: g(Ia, Ib)
 
-用于 greedy_refine():
-- score_fn(Ia, Ib) -> float，越大表示该区间越“需要插帧”
+Used by greedy_refine():
+- score_fn(Ia, Ib) -> float, higher means the interval needs more interpolation
 
-这里默认融合 5 个量（你提到的 5 信息融合）：
-1) RAFT: S_flow（运动强度）
-2) RAFT: conf（置信）
-3) RAFT: occ_ratio（遮挡/不一致比例）
-4) RGB: topk_rgb（局部变化）
-5) EDEN: diff_eden（全局差异）
+Fuses 5 signals by default:
+1) RAFT: S_flow (motion magnitude)
+2) RAFT: conf (confidence)
+3) RAFT: occ_ratio (occlusion/inconsistency ratio)
+4) RGB: topk_rgb (local change)
+5) EDEN: diff_eden (global difference)
 
-说明：
-- greedy_refine 每次插入新帧后，会继续对 (Ia, Im) 和 (Im, Ib) 打分；
-  因此 score_fn 必须能对“EDEN生成的新帧”也计算上述指标。
-- 为减少重复计算，内部提供了轻量 cache（按 data_ptr() 组合）。
-"""
+Notes:
+- After greedy_refine inserts a new frame, it re-scores (Ia, Im) and (Im, Ib),
+  so score_fn must handle EDEN-generated frames as well.
+- A lightweight cache (keyed by data_ptr() pair) avoids redundant computation.
+“””
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ class IntervalScorer:
         if self._cache_key == key and self._cache_val is not None:
             return self._cache_val
 
-        # 4) RGB top-k
+        # 4) RGB top-k diff
         s_rgb = topk_rgb_diff(frame0, frame1, topk_ratio=self.topk_ratio)
 
         # 5) EDEN diff
@@ -76,13 +76,13 @@ class IntervalScorer:
             s_conf = float(m.conf)
             s_occ = float(m.occ_ratio)
 
-        # 归一化/压缩：避免 s_flow 数值范围过大主导
-        # 经验做法：log1p 压缩 + 简单截断
+        # Normalize/compress: prevent s_flow from dominating due to large range
+        # Heuristic: log1p compression + simple clamping
         s_flow_n = float(torch.log1p(torch.tensor(s_flow)).item())
         s_rgb_n = min(1.0, max(0.0, s_rgb))
         s_eden_n = min(1.0, max(0.0, s_eden))
 
-        # conf 越大越可信，但我们要“需要插帧”的紧急度：更低 conf => 更难/更不稳定 => 更应该插
+        # Higher conf = more reliable, but we want interpolation urgency: lower conf => harder/less stable => insert more
         s_conf_n = 1.0 - min(1.0, max(0.0, s_conf))
         s_occ_n = min(1.0, max(0.0, s_occ))
 

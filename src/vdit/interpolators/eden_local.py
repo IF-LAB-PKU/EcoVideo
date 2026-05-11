@@ -1,15 +1,15 @@
-"""
-EDEN 本地插帧封装：把 inference.py 的“单次中点插帧”抽成可复用类。
+“””
+EDEN local interpolation wrapper: extracts single midpoint interpolation from inference.py into a reusable class.
 
-设计目标：
-- pipeline 层只依赖一个稳定接口：EdenInterpolator.interpolate(Ia, Ib) -> Imid
-- 不依赖 inference.py 的全局 args / 全局模型变量
-- 兼容单GPU与双GPU（encoder 与 DiT+decoder 分离）的模式
+Design goals:
+- Pipeline layer depends only on a stable interface: EdenInterpolator.interpolate(Ia, Ib) -> Imid
+- No dependency on inference.py global args / global model variables
+- Compatible with single-GPU and dual-GPU (encoder vs DiT+decoder split) modes
 
-约定输入输出：
-- frame: torch.Tensor [1,3,H,W], float, 值域 [0,1]，在 CPU 或 GPU 都可
-- 返回: torch.Tensor [1,3,H,W], float, 值域 [0,1]，默认返回 CPU（便于后续缓存/保存）
-"""
+Input/output conventions:
+- frame: torch.Tensor [1,3,H,W], float, range [0,1], can be on CPU or GPU
+- returns: torch.Tensor [1,3,H,W], float, range [0,1], defaults to CPU (for caching/saving)
+“””
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ class EdenInterpolator:
         with open(config_path, "r") as f:
             cfg = yaml.safe_load(f)
 
-        # inference.py 里是 argparse + set_defaults，这里直接把配置字典当作 args 使用
+        # Use config dict directly instead of argparse + set_defaults as in inference.py
         self.cfg: Dict[str, Any] = dict(cfg)
         self.model_name: str = self.cfg["model_name"]
         self.pretrained_eden_path: str = self.cfg["pretrained_eden_path"]
@@ -63,7 +63,7 @@ class EdenInterpolator:
         del ckpt
 
         if self.use_split_gpu and torch.cuda.device_count() < 2:
-            # 服务器只有一张卡时自动回退
+            # Auto fallback when only one GPU is available
             self.use_split_gpu = False
 
         if not self.use_split_gpu:
@@ -102,7 +102,7 @@ class EdenInterpolator:
 
     @torch.no_grad()
     def interpolate(self, frame0: torch.Tensor, frame1: torch.Tensor) -> torch.Tensor:
-        """插 1 张中点帧。"""
+        """Interpolate one midpoint frame."""
         h, w = frame0.shape[2:]
         padder = InputPadder([h, w])
 

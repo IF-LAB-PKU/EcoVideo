@@ -23,7 +23,7 @@ for _parent in [_HERE] + list(_HERE.parents):
 def main() -> None:
     p = argparse.ArgumentParser()
 
-    # -------- WAN 输入 --------
+    # -------- WAN input --------
     p.add_argument(
         "--ckpt_dir",
         "--wan_ckpt_dir",
@@ -34,11 +34,11 @@ def main() -> None:
     )
     p.add_argument("--prompt", type=str, default=None, help="Text prompt for WAN (required if not using --input_video)")
     
-    # 可选：直接从已有视频开始（跳过 WAN 生成，节省时间）
+    # Optional: start from an existing video (skip WAN generation to save time)
     p.add_argument("--input_video", type=str, default=None, help="Input video path (skip WAN generation if provided)")
     p.add_argument("--input_fps", type=float, default=None, help="Input video fps (auto-detect if not provided)")
 
-    # WAN 生成参数（baseline：t2v-1.3B）
+    # WAN generation parameters (baseline: t2v-1.3B)
     p.add_argument("--wan_version",
                    type=str,
                    default="2.1",
@@ -54,7 +54,7 @@ def main() -> None:
     p.add_argument("--wan_offload_model", dest="wan_offload_model", action="store_true", default=True, help="enable offload_model=True (recommended; default)")
     p.add_argument("--wan_no_offload_model", dest="wan_offload_model", action="store_false", help="disable model CPU offload")
 
-    # WAN 内部“均匀/随机取帧”（按 fps 下采样，保持时长不变）
+    # WAN internal uniform/random frame sampling (fps downsampling, keep duration)
     p.add_argument("--wan_out_fps", type=float, default=None, help="e.g. 8 or 12; None means no downsample")
     p.add_argument(
         "--wan_frame_sample",
@@ -71,7 +71,7 @@ def main() -> None:
         help="generator backend name",
     )
 
-    # -------- WAN: entropy keyframe（真正裁剪 latent 时间维）--------
+    # -------- WAN: entropy keyframe (true latent temporal dimension pruning) --------
     p.add_argument("--wan_keyframe_by_entropy", action="store_true")
     p.add_argument("--wan_entropy_steps", type=int, default=5)
     p.add_argument("--wan_entropy_mode", type=str, default="mean", choices=["last", "mean", "ema"])
@@ -119,7 +119,7 @@ def main() -> None:
     p.add_argument("--wan_save_teacache_trace_png", action="store_true")
     p.add_argument("--wan_no_save_teacache_trace_png", action="store_true")
 
-    # -------- CogVideo (Diffusers) T2V 参数 --------
+    # -------- CogVideo (Diffusers) T2V parameters --------
     p.add_argument("--cogvideo_precision", type=str, default="bfloat16", choices=["bfloat16", "float16"])
     p.add_argument("--cogvideo_height", type=int, default=480)
     p.add_argument("--cogvideo_width", type=int, default=720)
@@ -159,7 +159,7 @@ def main() -> None:
     p.add_argument("--cogvideo_vae_slicing", action="store_true")
     p.add_argument("--cogvideo_no_vae_slicing", action="store_true")
 
-    # -------- 插帧参数（你原来的 pipeline 参数）--------
+    # -------- Interpolation parameters (original pipeline parameters) --------
     p.add_argument("--eden_config", type=str, required=True)
     p.add_argument("--output_path", type=str, default="interpolation_outputs/final.mp4")
     p.add_argument("--log_file", type=str, default="interpolation_outputs/greedy_refinement.log")
@@ -174,13 +174,13 @@ def main() -> None:
     p.add_argument("--use_split_gpu", action="store_true")
     p.add_argument("--target_fps", type=float, default=24.0)
 
-    # 关键帧策略：如果你用了 WAN out_fps 做“先取帧”，建议这里用 all（避免二次采样）
+    # Keyframe strategy: use “all” if WAN out_fps already downsampled (avoid double sampling)
     p.add_argument("--keyframe_mode", type=str, choices=["all", "uniform", "random"], default="all")
     p.add_argument("--keyframes_k", type=int, default=8)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--topk_ratio", type=float, default=0.1)
 
-    # -------- NEW: 可选 baseline（WAN 生成完整视频）用于对比 --------
+    # -------- NEW: optional baseline (full WAN video generation) for comparison --------
     p.add_argument(
         "--wan_generate_full_baseline",
         action="store_true",
@@ -227,7 +227,7 @@ def main() -> None:
         help="Append cloud metrics as CSV (one row per sample).",
     )
 
-    # 可选：保存 WAN 中间视频
+    # Optional: save WAN intermediate video
     p.add_argument("--save_wan_video", type=str, default=None, help="save WAN raw/downsampled video for debugging")
     p.add_argument(
         "--save_sampled_video",
@@ -238,7 +238,7 @@ def main() -> None:
 
     args = p.parse_args()
 
-    # 参数验证
+    # Argument validation
     if args.input_video is None and (args.ckpt_dir is None or args.prompt is None):
         p.error("Must provide either --input_video or (--ckpt_dir + --prompt)")
     if args.stop_after_wan and not args.save_keyframes_video:
@@ -265,7 +265,7 @@ def main() -> None:
     if args.cogvideo_entropy_debug_dir:
         os.makedirs(args.cogvideo_entropy_debug_dir, exist_ok=True)
 
-    # 延迟导入（与 run_pipeline.py 一致）
+    # Lazy imports (consistent with run_pipeline.py)
     from vdit.pipeline.full_pipeline import FullPipelineConfig, run_full_pipeline
     from vdit.pipeline.run_iframe import PipelineConfig
 
@@ -436,7 +436,7 @@ def main() -> None:
     )
 
     full_cfg = FullPipelineConfig(
-        wan=gen_cfg,  # 历史字段名，实际承载任意 generator cfg
+        wan=gen_cfg,  # Legacy field name; actually holds any generator cfg
         iframe=iframe_cfg,
         generator_name=args.generator,
         stop_after_wan=args.stop_after_wan,
@@ -455,7 +455,7 @@ def main() -> None:
         cfg=full_cfg,
         log_file=args.log_file,
         save_sampled_video_path=args.save_sampled_video,
-        save_keyframes_video_path=args.save_keyframes_video,  # 仍保留：用于"单机插帧流程"时保存 preview
+        save_keyframes_video_path=args.save_keyframes_video,  # Kept for saving preview in single-machine interpolation flow
         save_wan_video_path=args.save_wan_video,
         generate_wan_full_baseline=(args.wan_generate_full_baseline if args.generator == "wan" else False),
         save_wan_full_baseline_video_path=args.save_wan_full_baseline_video,

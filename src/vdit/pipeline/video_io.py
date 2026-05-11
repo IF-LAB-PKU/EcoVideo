@@ -20,7 +20,7 @@ class VideoInfo:
 
 def read_video_tensor(path: str) -> Tuple[torch.Tensor, VideoInfo]:
     """
-    返回 frames: [T,3,H,W] float in [0,1]
+    Returns frames: [T,3,H,W] float in [0,1]
     """
     import os
     if not os.path.exists(path):
@@ -39,8 +39,7 @@ def read_video_tensor(path: str) -> Tuple[torch.Tensor, VideoInfo]:
 
 def _sanitize_fps_for_pyav(fps: float) -> int | fractions.Fraction:
     """
-    PyAV 接受 int 或 Fraction（有 numerator/denominator）。
-    numpy.float64 会导致 AttributeError。
+    PyAV accepts int or Fraction. numpy.float64 causes AttributeError.
     """
     fps_py = float(fps)
     if not math.isfinite(fps_py) or fps_py <= 0:

@@ -1,4 +1,4 @@
-# --------------- 模型权重格式 ---------------
+# Model weights
 *.pth
 *.pt
 *.ckpt
@@ -8,13 +8,12 @@
 *.onnx
 *.safetensors
 
-# --------------- 存放模型的目录（仅根目录，避免误忽略源码包 src/vdit/models/） ---------------
+# Model directories (root-level only, avoid ignoring src/vdit/models/)
 /models/
 checkpoints/
 weights/
-flolpips/weights/
 
-# --------------- 输出目录 ---------------
+# Output directories
 output/
 results/
 logs/
@@ -24,16 +23,13 @@ outputs/
 keyframes/
 *.log
 
-
-# --------------- 数据集目录 ---------------
+# Dataset directories
 dataset/
 data/
 
-# --------------- 大文件清单 ---------------
-VBench-master/**/lvis_v1_minival_inserted_image_name.json
-
-# --------------- Python环境/缓存 ---------------
+# Python environment / cache
 venv/
+.venv/
 conda_env/
 __pycache__/
 *.pyc
@@ -43,28 +39,28 @@ __pycache__/
 .pytest_cache/
 node_modules/
 
-# --------------- 其他 -------------
-*.tmp
-*.swp
-*.zip
-*.tar.gz
-*.7z
-.DS_Store
-.vscode/
-.idea/
-
-# Open-source inference pipeline artifacts
-pretrained_models/
-models/*.ckpt
-
+# Large media (except demo videos in assets/)
 *.mp4
 *.avi
 *.mov
 *.webm
+!assets/videos/*.mp4
 
 *.npy
 *.npz
 *.pkl
 
+# Editor / OS
+*.tmp
+*.swp
+.DS_Store
+.vscode/
+.idea/
+
+# Archives
+*.zip
+*.tar.gz
+*.7z
+
+# Environment files
 .env
-.venv/

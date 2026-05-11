@@ -122,7 +122,7 @@ def run_full_pipeline(
         "speedup": {},
     }
 
-    # -------- 从已有视频开始：只插帧，不做 baseline --------
+    # -------- From existing video: interpolation only, no baseline --------
     if input_video:
         t0 = time.perf_counter()
         frames, info = read_video_tensor(input_video)
@@ -152,7 +152,7 @@ def run_full_pipeline(
         _write_json(metrics_json_path, metrics)
         return metrics
 
-    # -------- baseline WAN full generation（可选，仅 WAN）--------
+    # -------- Baseline WAN full generation (optional, WAN only) --------
     baseline_wan_timing = None
     if generate_wan_full_baseline and cfg.generator_name == "wan":
         if prompt is None or wan_ckpt_dir is None:
@@ -189,7 +189,7 @@ def run_full_pipeline(
             _ensure_parent_dir(save_wan_full_baseline_video_path)
             write_video_tensor(save_wan_full_baseline_video_path, baseline_frames, fps=float(baseline_fps))
 
-    # -------- main WAN generation（你的关键帧/Method2/完整等）--------
+    # -------- Main WAN generation (keyframe/Method2/full) --------
     if prompt is None or wan_ckpt_dir is None:
         raise ValueError("Must provide either (input_video) or (prompt + wan_ckpt_dir)")
 
@@ -303,7 +303,7 @@ def run_full_pipeline(
         _ensure_parent_dir(sampled_video_path)
         write_video_tensor(sampled_video_path, frames, fps=float(fps_src))
 
-    # -------- iframe（插帧阶段）--------
+    # -------- Interpolation stage --------
     t0 = time.perf_counter()
     iframe_timing = run_interpolation_pipeline_from_frames(
         frames=frames,
@@ -333,7 +333,7 @@ def run_full_pipeline(
         speedup["wan_full_wall_over_wan_main_wall"] = (wan_full_wall / wan_main) if wan_main > 0 else None
         speedup["wan_main_wall_over_wan_full_wall"] = (wan_main / wan_full_wall) if wan_full_wall > 0 else None
 
-    # 更公平：用 WAN 内部 timing.json 的 denoise_sec 做 speedup
+    # Fairer comparison: use WAN internal timing.json denoise_sec for speedup
     try:
         if baseline_wan_timing and ("denoise_sec" in baseline_wan_timing) and ("wan_internal_timing" in metrics):
             den_full = float(baseline_wan_timing.get("denoise_sec", 0.0))

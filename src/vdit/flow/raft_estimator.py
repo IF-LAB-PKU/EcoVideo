@@ -1,12 +1,12 @@
 """
-RAFT 光流封装：提供
-- 前向/后向光流
-- 运动强度 S_flow
-- 置信度 conf（forward-back consistency）
-- 遮挡比例 occ_ratio
+RAFT optical flow wrapper providing:
+- forward/backward flow
+- motion magnitude S_flow
+- confidence conf (forward-back consistency)
+- occlusion ratio occ_ratio
 
-输入输出约定：
-- Ia, Ib: torch.Tensor [1,3,H,W], float, 值域 [0,1]
+I/O convention:
+- Ia, Ib: torch.Tensor [1,3,H,W], float, range [0,1]
 """
 
 from __future__ import annotations
@@ -36,9 +36,9 @@ class RaftMetrics:
 
 class RaftEstimator:
     """
-    最小可用封装：
-    - 不走 demo.py 的 sys.path
-    - 不强制依赖 scipy（我们不用 forward_interpolate）
+    Minimal wrapper:
+    - avoids demo.py sys.path manipulation
+    - no hard scipy dependency (forward_interpolate unused)
     """
 
     def __init__(
@@ -56,8 +56,8 @@ class RaftEstimator:
 
         if not model_path or not os.path.exists(model_path):
             raise FileNotFoundError(
-                f"RAFT 权重文件不存在：{model_path!r}\n"
-                "请确认路径正确，或通过命令行参数 --raft_ckpt 指向真实的 raft-things.pth。"
+                f"RAFT checkpoint not found: {model_path!r}\n"
+                "Verify the path or use --raft_ckpt to point to raft-things.pth."
             )
 
         args = SimpleNamespace(
@@ -72,13 +72,13 @@ class RaftEstimator:
             state = ckpt["state_dict"]
         else:
             state = ckpt
-        # 兼容 DataParallel 的前缀
+        # Strip DataParallel "module." prefix
         state = {k.replace("module.", ""): v for k, v in state.items()}
         model.load_state_dict(state, strict=False)
         model.to(self.device).eval()
         self.model = model
 
-        # 轻量缓存：避免 greedy_refine 对同一对帧重复算多次
+        # Lightweight cache to avoid redundant computation on the same frame pair
         self._cache_key: Optional[Tuple[int, int]] = None
         self._cache_val: Optional[RaftMetrics] = None
 
@@ -103,8 +103,8 @@ class RaftEstimator:
     @torch.no_grad()
     def _infer_flow(self, img1: torch.Tensor, img2: torch.Tensor) -> torch.Tensor:
         """
-        RAFT 输入通常按 [0,255]；这里从 [0,1] 转换。
-        返回 flow_up: [1,2,H,W]（unpad 后）
+        Convert input from [0,1] to [0,255] for RAFT.
+        Returns flow_up: [1,2,H,W] (after unpadding).
         """
         i1 = (img1.to(self.device) * 255.0).contiguous()
         i2 = (img2.to(self.device) * 255.0).contiguous()
@@ -118,7 +118,7 @@ class RaftEstimator:
     @torch.no_grad()
     def _consistency_metrics(self, f12: torch.Tensor, f21: torch.Tensor) -> Tuple[float, float]:
         """
-        forward-back consistency（够用且稳定的实现）：
+        Forward-back consistency check:
         - x2 = x + f12(x)
         - f21_warped(x) = f21(x2)
         - err = ||f12 + f21_warped||

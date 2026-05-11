@@ -8,7 +8,7 @@ export PYTHONPATH="${PYTHONPATH:-}:$(pwd)/src"
 COGVIDEO_CKPT="${COGVIDEO_CKPT:?Set COGVIDEO_CKPT to your CogVideoX checkpoint directory}"
 EDEN_CKPT="${EDEN_CKPT:?Set EDEN_CKPT to your EDEN checkpoint path}"
 RAFT_CKPT="${RAFT_CKPT:-}"
-PROMPT="${PROMPT:-A giraffe is walking through a green field under a blue sky.}"
+PROMPT="${PROMPT:-The bund Shanghai, oil painting.}"
 OUT="${OUT:-outputs/cogvideo_ecovideo.mp4}"
 
 TMP_CFG="outputs/eden_infer.local.yaml"

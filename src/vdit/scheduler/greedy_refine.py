@@ -80,7 +80,7 @@ def _to_list(head: Node) -> List[Any]:
 
 
 def _get_node_position(head: Node, target: Node) -> int:
-    """计算target节点在链表中的位置（从0开始）。"""
+    """Get the 0-based position of target node in the linked list."""
     pos = 0
     cur: Optional[Node] = head
     while cur is not None:
@@ -88,7 +88,7 @@ def _get_node_position(head: Node, target: Node) -> int:
             return pos
         pos += 1
         cur = cur.next
-    return -1  # 未找到
+    return -1  # not found
 
 
 def greedy_refine(

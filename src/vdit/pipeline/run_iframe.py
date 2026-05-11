@@ -40,13 +40,13 @@ def run_interpolation_pipeline_from_frames(
     return_timing: bool = False,
 ) -> Optional[dict]:
     """
-    核心插帧 pipeline（与 video_path 解耦）：
-      关键帧(均匀/随机/全帧) -> 5信息融合打分 -> greedy_refine(自适应决定每段插多少帧) -> EDEN 插帧 -> 输出视频
+    Core interpolation pipeline (decoupled from video_path):
+      keyframes(uniform/random/all) -> 5-signal scoring -> greedy_refine -> EDEN interpolation -> output video
 
     frames: [T,3,H,W] float in [0,1]
-    fps_src: 输入视频 fps（对 duration 与 target_len 计算很重要）
+    fps_src: source video fps (used for duration and target_len calculation)
 
-    return_timing=True 时，返回一个 timing dict（便于算加速比/拆分耗时）。
+    If return_timing=True, returns a timing dict for profiling.
     """
     import time
 
@@ -62,7 +62,7 @@ def run_interpolation_pipeline_from_frames(
     duration = (num_frames - 1) / float(fps_src)
     target_len = int(round(duration * float(cfg.target_fps))) + 1
     if target_len < 2:
-        raise ValueError("target_len < 2，输入视频太短或 target_fps 太小。")
+        raise ValueError("target_len < 2, input video too short or target_fps too low.")
 
     timing.update(
         dict(
@@ -75,7 +75,7 @@ def run_interpolation_pipeline_from_frames(
         )
     )
 
-    # -------- 关键帧选择 --------
+    # -------- Keyframe selection --------
     t0 = time.perf_counter()
     if cfg.keyframe_mode == "all":
         init_frames = [frames[i].unsqueeze(0).cpu() for i in range(num_frames)]
@@ -98,10 +98,10 @@ def run_interpolation_pipeline_from_frames(
     if len(init_frames) > target_len:
         raise ValueError(
             f"initial frames ({len(init_frames)}) > target_len ({target_len}). "
-            f"请先降低 keyframes_k 或调高 target_fps。"
+            f"Reduce keyframes_k or increase target_fps."
         )
 
-    # -------- 插帧器与打分器 --------
+    # -------- Interpolator and scorer --------
     t0 = time.perf_counter()
     eden = EdenInterpolator(
         config_path=cfg.eden_config,
@@ -128,7 +128,7 @@ def run_interpolation_pipeline_from_frames(
     def interp_fn(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         return eden.interpolate(a, b)
 
-    # -------- 自适应插帧数量 --------
+    # -------- Adaptive interpolation --------
     t0 = time.perf_counter()
     out_frames = greedy_refine(
         init_frames,
@@ -159,7 +159,7 @@ def run_interpolation_pipeline(
     log_file: Optional[str] = None,
 ) -> None:
     """
-    兼容原用法：从视频文件读取 -> 调用 from_frames 版本。
+    Legacy wrapper: reads from a video file and delegates to from_frames.
     """
     frames, info = read_video_tensor(video_path)
     run_interpolation_pipeline_from_frames(

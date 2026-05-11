@@ -8,9 +8,8 @@ import torch
 
 def uniform_keyframes(frames: torch.Tensor, *, k: int) -> List[torch.Tensor]:
     """
-    均匀取 k 帧作为关键帧（保留首尾）。
-    frames: [T,3,H,W]
-    返回 list of [1,3,H,W] on CPU
+    Uniformly sample k keyframes (always keeping first and last).
+    frames: [T,3,H,W]. Returns list of [1,3,H,W] on CPU.
     """
     t = int(frames.shape[0])
     if k <= 2 or t <= 2:
@@ -19,7 +18,7 @@ def uniform_keyframes(frames: torch.Tensor, *, k: int) -> List[torch.Tensor]:
         idxs = [round(i * (t - 1) / (k - 1)) for i in range(k)]
         idxs[0] = 0
         idxs[-1] = t - 1
-        # 去重保持顺序
+        # Deduplicate while preserving order
         seen = set()
         idxs = [i for i in idxs if not (i in seen or seen.add(i))]
 
@@ -28,7 +27,7 @@ def uniform_keyframes(frames: torch.Tensor, *, k: int) -> List[torch.Tensor]:
 
 def random_keyframes(frames: torch.Tensor, *, k: int, seed: int = 0) -> List[torch.Tensor]:
     """
-    随机取 k 帧作为关键帧（强制包含首尾）。
+    Randomly sample k keyframes (always including first and last).
     """
     t = int(frames.shape[0])
     if t <= 2:
