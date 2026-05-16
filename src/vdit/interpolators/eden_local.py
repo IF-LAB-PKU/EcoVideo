@@ -1,4 +1,4 @@
-“””
+"""
 EDEN local interpolation wrapper: extracts single midpoint interpolation from inference.py into a reusable class.
 
 Design goals:
@@ -9,7 +9,7 @@ Design goals:
 Input/output conventions:
 - frame: torch.Tensor [1,3,H,W], float, range [0,1], can be on CPU or GPU
 - returns: torch.Tensor [1,3,H,W], float, range [0,1], defaults to CPU (for caching/saving)
-“””
+"""
 
 from __future__ import annotations
 

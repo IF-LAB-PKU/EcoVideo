@@ -1,4 +1,4 @@
-“””
+"""
 5-signal fusion scoring: g(Ia, Ib)
 
 Used by greedy_refine():
@@ -15,7 +15,7 @@ Notes:
 - After greedy_refine inserts a new frame, it re-scores (Ia, Im) and (Im, Ib),
   so score_fn must handle EDEN-generated frames as well.
 - A lightweight cache (keyed by data_ptr() pair) avoids redundant computation.
-“””
+"""
 
 from __future__ import annotations
 

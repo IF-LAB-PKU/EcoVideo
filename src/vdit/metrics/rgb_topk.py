@@ -5,10 +5,10 @@ import torch
 
 @torch.no_grad()
 def topk_rgb_diff(frame0: torch.Tensor, frame1: torch.Tensor, *, topk_ratio: float = 0.1) -> float:
-    “””
+    """
     Local texture/change metric: mean of top-k pixel absolute differences.
     Input frame: [1,3,H,W] in [0,1]
-    “””
+    """
     delta = (frame0 - frame1).abs().mean(dim=1)  # [1,H,W]
     flat = delta.reshape(-1)
     k = max(1, int(topk_ratio * flat.numel()))
