@@ -11,9 +11,6 @@ scripts/run_full_pipeline.py
   -> final video
 ```
 
-<p align="center">
-  <img src="assets/pipeline.jpg" width="80%" />
-</p>
 
 ## Demo
 
