@@ -264,8 +264,9 @@ If you find this project useful, please cite our paper:
 ```bibtex
 @article{chen2025ecovideo,
   title   = {EcoVideo: Entropy-Orchestrated Video Generation Paradigm in Cloud-Edge Dynamics},
-  author  = {Jiayu Chen and Hengyi Zhang and Minyu Li and Maoliang Li and Zihao Zheng and Guojie Luo and Xuanzhe Liu and Xiang Chen},
-  year    = {2025},
+  author  = {Jiayu Chen and Hengyi Zhang and Maoliang Li and Minyu Li and Zihao Zheng and Xuanzhe Liu and Guojie Luo and Xiang Chen},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  year    = {2026},
 }
 ```
 
